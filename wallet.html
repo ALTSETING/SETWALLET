@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>SETWALLET — Wallet</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wallet">
+
+  <h2>Your Wallet</h2>
+
+  <div class="address">
+    <span id="address">0x----</span>
+    <button onclick="copyAddress()">Copy</button>
+  </div>
+
+  <div class="balances">
+    <div class="balance">
+      <span>ALT</span>
+      <strong id="alt">0</strong>
+    </div>
+    <div class="balance">
+      <span>ALTST</span>
+      <strong id="altst">0</strong>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button>Send</button>
+    <button>Receive</button>
+  </div>
+
+  <h3>History</h3>
+  <ul class="history" id="history"></ul>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

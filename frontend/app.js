@@ -3,41 +3,85 @@ console.log("APP JS LOADED");
 // =====================
 // CONFIG
 // =====================
-const API_BASE = "https://setwallet.onrender.com"; // <-- ЗАМІНИ, якщо інший Render URL
+const API_BASE = "https://setwallet.onrender.com"; // Render URL
 
 // Local storage keys
 const LS_WALLET = "setwallet_wallet_v1";
 const LS_NONCE  = "setwallet_last_nonce_v1";
 
 // =====================
-// UI helpers
+// DOM helpers (SAFE)
 // =====================
 const $ = (id) => document.getElementById(id);
 
+function setText(id, txt) {
+  const el = $(id);
+  if (el) el.textContent = txt;
+}
+
+function setValue(id, val) {
+  const el = $(id);
+  if (el) el.value = val;
+}
+
+function onClick(id, fn) {
+  const el = $(id);
+  if (el) el.onclick = fn;
+}
+
+function hasEl(id) {
+  return !!$(id);
+}
+
+// =====================
+// UI
+// =====================
+function loadWalletMeta(){
+  try{
+    const raw = localStorage.getItem(LS_WALLET);
+    if(!raw) return null;
+    const w = JSON.parse(raw);
+    return w?.address ? w : null;
+  }catch{ return null; }
+}
+
 function show(view) {
   const views = ["Welcome","Create","Import","Wallet","Send","Receive","Scan"];
-  for (const v of views) $("view"+v).classList.add("hidden");
-  $("view"+view).classList.remove("hidden");
 
-  // logout button
+  // hide all safely
+  for (const v of views) {
+    const el = $("view" + v);
+    if (el) el.classList.add("hidden");
+  }
+
+  // show target safely
+  const target = $("view" + view);
+  if (target) target.classList.remove("hidden");
+
+  // logout visibility
   const hasWallet = !!loadWalletMeta();
-  $("btnLogout").classList.toggle("hidden", !hasWallet);
+  const logoutBtn = $("btnLogout");
+  if (logoutBtn) logoutBtn.classList.toggle("hidden", !hasWallet);
 }
 
 function toast(el, msg) {
+  if (!el) return;
   el.textContent = msg;
   el.classList.remove("hidden");
   setTimeout(()=> el.classList.add("hidden"), 6000);
 }
 
+// ✅ nav expects LOWERCASE
 function nav(where){
-  if(where === "welcome") show("Welcome");
-  if(where === "create") show("Create");
-  if(where === "import") show("Import");
-  if(where === "wallet") show("Wallet");
-  if(where === "send") show("Send");
-  if(where === "receive") show("Receive");
-  if(where === "scan") show("Scan");
+  const w = (where || "").toLowerCase();
+
+  if(w === "welcome") return show("Welcome");
+  if(w === "create")  return show("Create");
+  if(w === "import")  return show("Import");
+  if(w === "wallet")  return show("Wallet");
+  if(w === "send")    return show("Send");
+  if(w === "receive") return show("Receive");
+  if(w === "scan")    return show("Scan");
 }
 
 // =====================
@@ -131,17 +175,6 @@ async function importPrivatePem(pem){
   );
 }
 
-async function importPublicPem(pem){
-  const der = pemToDer(pem);
-  return crypto.subtle.importKey(
-    "spki",
-    der,
-    { name:"ECDSA", namedCurve:"P-256" },
-    true,
-    ["verify"]
-  );
-}
-
 async function generateKeypair(){
   return crypto.subtle.generateKey(
     { name:"ECDSA", namedCurve:"P-256" },
@@ -155,11 +188,10 @@ async function sha256(data){
 }
 
 async function addressFromPublicPem(pubPem){
-  // address = "SET" + first 20 bytes of SHA256(publicPem)
   const enc = new TextEncoder();
   const hash = await sha256(enc.encode(pubPem));
   const hex = ab2hex(hash);
-  return "SET" + hex.slice(0, 40); // 20 bytes = 40 hex
+  return "SET" + hex.slice(0, 40);
 }
 
 async function signMessage(privKey, messageBytes){
@@ -172,9 +204,7 @@ async function signMessage(privKey, messageBytes){
 }
 
 // =====================
-// Local wallet storage (MVP)
-// - якщо є пароль: шифруємо private PEM AES-GCM (PBKDF2)
-// - якщо нема: зберігаємо plaintext (тільки для MVP)
+// Local storage
 // =====================
 async function deriveAesKey(pass, saltB64){
   const salt = saltB64 ? b64ToBuf(saltB64) : crypto.getRandomValues(new Uint8Array(16)).buffer;
@@ -220,15 +250,6 @@ function saveWallet(payload){
   localStorage.setItem(LS_WALLET, JSON.stringify(payload));
 }
 
-function loadWalletMeta(){
-  try{
-    const raw = localStorage.getItem(LS_WALLET);
-    if(!raw) return null;
-    const w = JSON.parse(raw);
-    return w?.address ? w : null;
-  }catch{ return null; }
-}
-
 function clearWallet(){
   localStorage.removeItem(LS_WALLET);
   localStorage.removeItem(LS_NONCE);
@@ -243,36 +264,53 @@ function getNextNonce(){
 }
 
 // =====================
-// QR
+// QR (SAFE: if QRCode lib missing -> message)
 // =====================
 let qrObj = null;
+
 function makeQrPayload(address){
   return JSON.stringify({ v:1, type:"setwallet_transfer", to: address });
 }
+
 function renderQR(address){
   const payload = makeQrPayload(address);
-  $("qrPayload").value = payload;
-  $("qr").innerHTML = "";
-  qrObj = new QRCode($("qr"), {
-    text: payload,
-    width: 220,
-    height: 220
-  });
+
+  if (hasEl("qrPayload")) setValue("qrPayload", payload);
+  const qrEl = $("qr");
+  if (!qrEl) return;
+
+  qrEl.innerHTML = "";
+
+  if (typeof QRCode === "undefined") {
+    qrEl.innerHTML = "<div style='opacity:.8'>QR lib не підключена (QRCode)</div>";
+    return;
+  }
+
+  qrObj = new QRCode(qrEl, { text: payload, width: 220, height: 220 });
 }
 
 // =====================
-// Scanner
+// Scanner (SAFE: if html5-qrcode missing)
 // =====================
 let qrScanner = null;
+
 async function startScan(){
-  $("scanMsg").classList.add("hidden");
+  const msgEl = $("scanMsg");
+  if (msgEl) msgEl.classList.add("hidden");
+
+  if (typeof Html5Qrcode === "undefined") {
+    toast(msgEl, "Сканер не підключений (html5-qrcode)");
+    return;
+  }
+
   if(qrScanner) return;
 
   qrScanner = new Html5Qrcode("scanner");
   const devices = await Html5Qrcode.getCameras();
   const cameraId = devices?.[0]?.id;
+
   if(!cameraId) {
-    toast($("scanMsg"), "Камеру не знайдено");
+    toast(msgEl, "Камеру не знайдено");
     return;
   }
 
@@ -283,16 +321,17 @@ async function startScan(){
       try{
         const data = JSON.parse(decodedText);
         if(data?.to){
-          $("sendTo").value = data.to;
-          if(data.amount) $("sendAmt").value = String(data.amount);
-          toast($("scanMsg"), "QR зчитано ✅ Переходимо в Send");
+          if (hasEl("sendTo")) setValue("sendTo", data.to);
+          if (data.amount && hasEl("sendAmt")) setValue("sendAmt", String(data.amount));
+
+          toast(msgEl, "QR зчитано ✅ Переходимо в Send");
           stopScan();
           nav("send");
         } else {
-          toast($("scanMsg"), "QR не схожий на SETWALLET");
+          toast(msgEl, "QR не схожий на SETWALLET");
         }
       }catch{
-        toast($("scanMsg"), "Не вдалося прочитати QR (не JSON)");
+        toast(msgEl, "Не вдалося прочитати QR (не JSON)");
       }
     },
     () => {}
@@ -312,79 +351,88 @@ async function stopScan(){
 async function ensureWalletLoaded(){
   const meta = loadWalletMeta();
   if(!meta) { nav("welcome"); return null; }
-  $("walletAddr").textContent = meta.address;
-  $("walletPub").value = meta.public_key_pem;
+
+  setText("walletAddr", meta.address);
+  if (hasEl("walletPub")) setValue("walletPub", meta.public_key_pem);
+
   return meta;
 }
 
 async function refreshBalance(){
   const meta = await ensureWalletLoaded();
   if(!meta) return;
+
   try{
     const bal = await apiGetBalance(meta.address);
-    $("walletBal").textContent = String(bal);
+    setText("walletBal", String(bal));
   }catch(e){
-    $("walletBal").textContent = "0";
+    setText("walletBal", "0");
     alert("Balance error: " + e.message);
   }
 }
 
 // =====================
-// Init UI
+// Init UI events (SAFE)
 // =====================
 document.addEventListener("click", (e)=>{
   const btn = e.target.closest("[data-nav]");
-  if(btn){
-    const to = btn.getAttribute("data-nav");
-    if(to === "scan") startScan();
-    if(to !== "scan") stopScan();
-    nav(to[0].toUpperCase()+to.slice(1));
-  }
+  if(!btn) return;
+
+  const to = (btn.getAttribute("data-nav") || "").toLowerCase();
+
+  if(to === "scan") startScan();
+  else stopScan();
+
+  // ✅ FIX: call nav(to) directly (lowercase)
+  nav(to);
 });
 
 // Buttons
-$("btnCreate").onclick = ()=> nav("create");
-$("btnImport").onclick = ()=> nav("import");
+onClick("btnCreate", ()=> nav("create"));
+onClick("btnImport", ()=> nav("import"));
 
-$("btnLogout").onclick = ()=>{
+onClick("btnLogout", ()=>{
   stopScan();
   clearWallet();
   nav("welcome");
-};
+});
 
-$("btnCopyAddr").onclick = async ()=>{
+onClick("btnCopyAddr", async ()=>{
   const meta = loadWalletMeta();
   if(!meta) return;
   await navigator.clipboard.writeText(meta.address);
   alert("Скопійовано ✅");
-};
+});
 
-$("btnRefresh").onclick = refreshBalance;
+onClick("btnRefresh", refreshBalance);
 
-$("btnShowKeys").onclick = ()=>{
-  $("pubModal").classList.remove("hidden");
-};
-$("btnCloseModal").onclick = ()=>{
-  $("pubModal").classList.add("hidden");
-};
+onClick("btnShowKeys", ()=> {
+  const m = $("pubModal");
+  if (m) m.classList.remove("hidden");
+});
+onClick("btnCloseModal", ()=> {
+  const m = $("pubModal");
+  if (m) m.classList.add("hidden");
+});
 
-$("btnRegenQR").onclick = async ()=>{
+onClick("btnRegenQR", async ()=>{
   const meta = await ensureWalletLoaded();
   if(!meta) return;
   renderQR(meta.address);
-};
+});
 
 // Create
-$("btnDoCreate").onclick = async ()=>{
-  $("createOut").classList.add("hidden");
-  const pass = $("createPass").value.trim();
+onClick("btnDoCreate", async ()=>{
+  const out = $("createOut");
+  if (out) out.classList.add("hidden");
+
+  const pass = ( $("createPass")?.value || "" ).trim();
 
   const kp = await generateKeypair();
   const pubPem = await exportPublicPem(kp.publicKey);
   const privPem = await exportPrivatePem(kp.privateKey);
   const address = await addressFromPublicPem(pubPem);
 
-  // store
   let stored = { address, public_key_pem: pubPem, encrypted: false, vault: null };
 
   if(pass){
@@ -398,45 +446,51 @@ $("btnDoCreate").onclick = async ()=>{
 
   saveWallet(stored);
 
-  $("createAddress").value = address;
-  $("createPub").value = pubPem;
-  $("createOut").classList.remove("hidden");
-};
+  if (hasEl("createAddress")) setValue("createAddress", address);
+  if (hasEl("createPub")) setValue("createPub", pubPem);
 
-$("btnRegister").onclick = async ()=>{
+  if (out) out.classList.remove("hidden");
+});
+
+onClick("btnRegister", async ()=>{
   const meta = loadWalletMeta();
   if(!meta) return;
 
   try{
-    await apiRegisterWallet(meta.address, meta.public_key_pem, meta.encrypted ? JSON.stringify(meta.vault) : null);
+    await apiRegisterWallet(
+      meta.address,
+      meta.public_key_pem,
+      meta.encrypted ? JSON.stringify(meta.vault) : null
+    );
     alert("Зареєстровано ✅");
   }catch(e){
     alert("Register error: " + e.message);
   }
-};
+});
 
-$("btnGoWallet1").onclick = async ()=>{
+onClick("btnGoWallet1", async ()=>{
   nav("wallet");
   await refreshBalance();
-};
+  const meta = loadWalletMeta();
+  if(meta) renderQR(meta.address);
+});
 
 // Import
-$("btnLoadLocal").onclick = async ()=>{
+onClick("btnLoadLocal", async ()=>{
   const meta = loadWalletMeta();
   if(!meta){ toast($("importMsg"), "Локального гаманця не знайдено"); return; }
   toast($("importMsg"), "Локальний гаманець знайдено ✅ Натисни Імпортувати або просто відкрий Wallet");
-};
+});
 
-$("btnDoImport").onclick = async ()=>{
-  const pass = $("importPass").value.trim();
-  const privPemInput = $("importPriv").value.trim();
+onClick("btnDoImport", async ()=>{
+  const pass = ( $("importPass")?.value || "" ).trim();
+  const privPemInput = ( $("importPriv")?.value || "" ).trim();
 
   try{
     let privPem = privPemInput;
     let meta = loadWalletMeta();
 
     if(!privPem){
-      // try decrypt from local vault
       if(!meta) throw new Error("Немає локального vault і не вставлений private key");
       if(meta.encrypted){
         if(!pass) throw new Error("Потрібен пароль для розшифрування");
@@ -449,18 +503,14 @@ $("btnDoImport").onclick = async ()=>{
     }
 
     // validate import by importing key
-    const privKey = await importPrivatePem(privPem);
+    await importPrivatePem(privPem);
 
-    // if user pasted private key, we need public key too
-    // for MVP: we keep existing public key if exists, else fail
     if(!meta?.public_key_pem){
       throw new Error("Для MVP потрібен public key PEM (створюй гаманець тут або збережи public key)");
     }
 
-    // derive address again from stored pub
     const address = await addressFromPublicPem(meta.public_key_pem);
 
-    // store (re-encrypt if password provided)
     let stored = { address, public_key_pem: meta.public_key_pem, encrypted:false, vault:null };
 
     if(pass){
@@ -475,26 +525,27 @@ $("btnDoImport").onclick = async ()=>{
     toast($("importMsg"), "Імпорт успішний ✅");
     nav("wallet");
     await refreshBalance();
+    renderQR(address);
   }catch(e){
     toast($("importMsg"), "Import error: " + e.message);
   }
-};
+});
 
 // Send
-$("btnDoSend").onclick = async ()=>{
+onClick("btnDoSend", async ()=>{
   const meta = loadWalletMeta();
   if(!meta) return;
 
-  const to = $("sendTo").value.trim();
-  const amt = Number($("sendAmt").value.trim() || "0");
-  const memo = $("sendMemo").value.trim() || null;
+  const to = ( $("sendTo")?.value || "" ).trim();
+  const amt = Number(( $("sendAmt")?.value || "0" ).trim());
+  const memo = ( $("sendMemo")?.value || "" ).trim() || null;
 
   if(!to) return toast($("sendMsg"), "Вкажи To address");
   if(!Number.isFinite(amt) || amt <= 0) return toast($("sendMsg"), "Вкажи Amount > 0");
 
   try{
-    // load private key
     let privPem = null;
+
     if(meta.encrypted){
       const pass = prompt("Введи пароль для підпису транзакції:");
       if(!pass) throw new Error("Пароль не введено");
@@ -506,6 +557,7 @@ $("btnDoSend").onclick = async ()=>{
 
     const privKey = await importPrivatePem(privPem);
     const nonce = getNextNonce();
+
     const msg = `${meta.address}:${to}:${amt}:${nonce}`;
     const sigB64 = await signMessage(privKey, new TextEncoder().encode(msg));
 
@@ -521,22 +573,21 @@ $("btnDoSend").onclick = async ()=>{
 
     const res = await apiSendTx(payload);
     toast($("sendMsg"), `Відправлено ✅ tx_id=${res.tx_id}`);
-    $("sendMemo").value = "";
+
+    if (hasEl("sendMemo")) setValue("sendMemo", "");
     await refreshBalance();
   }catch(e){
     toast($("sendMsg"), "Send error: " + e.message);
   }
-};
+});
 
 // =====================
 // Boot
 // =====================
 (async function boot(){
-  // API status
   const ok = await apiPing();
-  $("apiStatus").textContent = ok ? "онлайн ✅" : "не відповідає ❌";
+  setText("apiStatus", ok ? "онлайн ✅" : "не відповідає ❌");
 
-  // initial view
   const meta = loadWalletMeta();
   if(meta){
     nav("wallet");

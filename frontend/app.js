@@ -1,4 +1,4 @@
-console.log("SETWALLET app.js LOADED");
+
 // =====================
 // CONFIG
 // =====================

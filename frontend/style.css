@@ -211,3 +211,13 @@ input:focus, textarea:focus{
 }
 .modalHead{display:flex; justify-content:space-between; align-items:center}
 .modalTitle{font-weight:900}
+
+main.wrap {
+  min-height: calc(100vh - 80px); /* 80px = header */
+  padding: 32px;
+  display: block;
+}
+
+section[id^="view"] {
+  display: block;
+}

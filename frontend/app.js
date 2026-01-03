@@ -1,4 +1,8 @@
 console.log("APP JS LOADED");
+$("btnStopScan").onclick = () => {
+  stopScan();
+};
+
 
 // =====================
 // CONFIG

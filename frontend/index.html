@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="bg"></div>
+  <div class="noise"></div>
 
   <header class="topbar">
     <div class="brand">
@@ -17,14 +18,34 @@
         <div class="subtitle">OnlyChain Wallet</div>
       </div>
     </div>
-    <button id="btnLogout" class="btn ghost small hidden">Вийти</button>
+
+    <div class="right">
+      <span id="apiBadge" class="badge">API: ...</span>
+      <button id="btnLogout" class="btn ghost small hidden">Вийти</button>
+    </div>
   </header>
 
   <main class="wrap">
+    <!-- ALWAYS VISIBLE DEBUG -->
+    <section class="card" id="debugCard">
+      <div class="row between">
+        <div>
+          <div class="h">UI Status</div>
+          <div class="muted">Якщо тут є текст — фронт точно завантажився.</div>
+        </div>
+        <button id="btnToggleDebug" class="btn ghost small">Debug</button>
+      </div>
+      <div id="debugBox" class="debug hidden"></div>
+    </section>
+
     <!-- WELCOME -->
-    <section id="viewWelcome" class="card">
-      <h1>Почнемо</h1>
-      <p class="muted">Ключі створюються і зберігаються <b>у твоєму браузері</b>. Сервер приватні ключі не отримує.</p>
+    <section id="viewWelcome" class="card view">
+      <div class="row between">
+        <div>
+          <div class="h">Почнемо</div>
+          <div class="muted">Ключі створюються у браузері. Сервер приватні ключі не отримує.</div>
+        </div>
+      </div>
 
       <div class="grid2">
         <button id="btnCreate" class="btn primary">Створити гаманець</button>
@@ -33,26 +54,29 @@
 
       <div class="sep"></div>
 
-      <div class="row">
-        <div class="pill">API</div>
-        <div id="apiStatus" class="muted">перевіряю…</div>
+      <div class="muted">
+        Якщо UI пустий — значить Vercel не віддає index.html. Але якщо ти це бачиш — все ок ✅
       </div>
     </section>
 
     <!-- CREATE -->
-    <section id="viewCreate" class="card hidden">
-      <h1>Створення гаманця</h1>
-      <p class="muted">Ми згенеруємо пару ключів ECDSA (P-256). Адреса = хеш public key.</p>
+    <section id="viewCreate" class="card view hidden">
+      <div class="row between">
+        <div>
+          <div class="h">Створення гаманця</div>
+          <div class="muted">Генеруємо ECDSA P-256. Адреса = SHA256(publicKey) обрізка.</div>
+        </div>
+        <button data-nav="welcome" class="btn ghost small">Назад</button>
+      </div>
 
       <div class="field">
-        <label>Пароль для локального шифрування (опц.)</label>
-        <input id="createPass" type="password" placeholder="можна залишити порожнім (не рекомендую)" />
-        <div class="hint">Якщо пароль порожній — ключ збережеться без шифрування (тільки для MVP).</div>
+        <label>Пароль для шифрування (необовʼязково)</label>
+        <input id="createPass" type="password" placeholder="краще поставити пароль" />
       </div>
 
       <div class="grid2">
         <button id="btnDoCreate" class="btn primary">Згенерувати</button>
-        <button data-nav="welcome" class="btn ghost">Назад</button>
+        <button id="btnRegister" class="btn">Зареєструвати в OnlyChain</button>
       </div>
 
       <div id="createOut" class="hidden">
@@ -63,53 +87,52 @@
         </div>
         <div class="field">
           <label>Public Key (PEM)</label>
-          <textarea id="createPub" rows="6" readonly></textarea>
+          <textarea id="createPub" rows="7" readonly></textarea>
         </div>
-
         <div class="grid2">
-          <button id="btnRegister" class="btn primary">Зареєструвати в OnlyChain</button>
-          <button id="btnGoWallet1" class="btn">Відкрити гаманець</button>
+          <button data-nav="wallet" class="btn primary">Відкрити гаманець</button>
+          <button id="btnCopyAddr" class="btn">Копіювати адресу</button>
         </div>
       </div>
+
+      <div id="createMsg" class="toast hidden"></div>
     </section>
 
     <!-- IMPORT -->
-    <section id="viewImport" class="card hidden">
-      <h1>Імпорт</h1>
-      <p class="muted">Встав <b>Private Key (PEM)</b> або імпортуй із локального vault (якщо ти вже створював гаманець у цьому браузері).</p>
+    <section id="viewImport" class="card view hidden">
+      <div class="row between">
+        <div>
+          <div class="h">Імпорт</div>
+          <div class="muted">Встав private key PEM або завантаж локальний vault.</div>
+        </div>
+        <button data-nav="welcome" class="btn ghost small">Назад</button>
+      </div>
 
       <div class="field">
-        <label>Пароль (якщо ключ був зашифрований)</label>
+        <label>Пароль (якщо ключ зашифрований)</label>
         <input id="importPass" type="password" placeholder="пароль або порожньо" />
       </div>
 
       <div class="field">
         <label>Private Key (PEM)</label>
         <textarea id="importPriv" rows="8" placeholder="-----BEGIN PRIVATE KEY----- ..."></textarea>
-        <div class="hint">Для простоти MVP: можна імпортувати PEM приватного ключа.</div>
       </div>
 
       <div class="grid2">
         <button id="btnDoImport" class="btn primary">Імпортувати</button>
-        <button data-nav="welcome" class="btn ghost">Назад</button>
+        <button id="btnLoadLocal" class="btn">Завантажити localStorage</button>
       </div>
-
-      <div class="sep"></div>
-      <button id="btnLoadLocal" class="btn ghost full">Завантажити локальний гаманець (localStorage)</button>
 
       <div id="importMsg" class="toast hidden"></div>
     </section>
 
     <!-- WALLET -->
-    <section id="viewWallet" class="card hidden">
-      <div class="walletTop">
+    <section id="viewWallet" class="card view hidden">
+      <div class="row between">
         <div>
-          <h1>Гаманець</h1>
+          <div class="h">Гаманець</div>
           <div class="muted">Адреса</div>
-          <div class="addrRow">
-            <code id="walletAddr" class="addr"></code>
-            <button id="btnCopyAddr" class="btn ghost small">Копіювати</button>
-          </div>
+          <code id="walletAddr" class="addr">—</code>
         </div>
         <div class="balanceBox">
           <div class="muted">Баланс</div>
@@ -132,19 +155,24 @@
 
       <div id="pubModal" class="modal hidden">
         <div class="modalCard">
-          <div class="modalHead">
-            <div class="modalTitle">Public Key (PEM)</div>
+          <div class="row between">
+            <div class="h">Public Key</div>
             <button id="btnCloseModal" class="btn ghost small">✕</button>
           </div>
-          <textarea id="walletPub" rows="8" readonly></textarea>
+          <textarea id="walletPub" rows="9" readonly></textarea>
         </div>
       </div>
     </section>
 
     <!-- SEND -->
-    <section id="viewSend" class="card hidden">
-      <h1>Відправити</h1>
-      <p class="muted">Транзакція підписується в браузері. Сервер перевіряє підпис.</p>
+    <section id="viewSend" class="card view hidden">
+      <div class="row between">
+        <div>
+          <div class="h">Відправити</div>
+          <div class="muted">Підпис у браузері, сервер тільки перевіряє.</div>
+        </div>
+        <button data-nav="wallet" class="btn ghost small">Назад</button>
+      </div>
 
       <div class="field">
         <label>To address</label>
@@ -154,7 +182,6 @@
       <div class="field">
         <label>Amount (ALT)</label>
         <input id="sendAmt" type="number" min="1" step="1" placeholder="100" />
-        <div class="hint">Поки що ALT = ціле число (BIGINT). Потім зробимо decimals.</div>
       </div>
 
       <div class="field">
@@ -162,18 +189,19 @@
         <input id="sendMemo" placeholder="coffee" />
       </div>
 
-      <div class="grid2">
-        <button id="btnDoSend" class="btn primary">Підписати і відправити</button>
-        <button data-nav="wallet" class="btn ghost">Назад</button>
-      </div>
-
+      <button id="btnDoSend" class="btn primary full">Підписати і відправити</button>
       <div id="sendMsg" class="toast hidden"></div>
     </section>
 
     <!-- RECEIVE -->
-    <section id="viewReceive" class="card hidden">
-      <h1>Отримати</h1>
-      <p class="muted">Покажи цей QR — інший користувач може просканити й одразу заповнити адресу.</p>
+    <section id="viewReceive" class="card view hidden">
+      <div class="row between">
+        <div>
+          <div class="h">Отримати</div>
+          <div class="muted">Покажи QR — інший користувач просканить.</div>
+        </div>
+        <button data-nav="wallet" class="btn ghost small">Назад</button>
+      </div>
 
       <div class="qrBox">
         <div id="qr"></div>
@@ -184,34 +212,35 @@
         <textarea id="qrPayload" rows="4" readonly></textarea>
       </div>
 
-      <div class="grid2">
-        <button id="btnRegenQR" class="btn">Оновити QR</button>
-        <button data-nav="wallet" class="btn ghost">Назад</button>
-      </div>
+      <button id="btnRegenQR" class="btn full">Оновити QR</button>
     </section>
 
     <!-- SCAN -->
-    <section id="viewScan" class="card hidden">
-      <h1>Скан QR</h1>
-      <p class="muted">Дозволь камеру (потрібно https). Після скану адреса і сума підставляться в Send.</p>
+    <section id="viewScan" class="card view hidden">
+      <div class="row between">
+        <div>
+          <div class="h">Скан QR</div>
+          <div class="muted">Потрібно https + дозвіл камери.</div>
+        </div>
+        <button data-nav="wallet" class="btn ghost small">Назад</button>
+      </div>
 
       <div id="scanner" class="scanner"></div>
 
       <div class="grid2">
         <button id="btnStopScan" class="btn">Зупинити</button>
-        <button data-nav="wallet" class="btn ghost">Назад</button>
+        <button data-nav="send" class="btn ghost">В Send</button>
       </div>
 
       <div id="scanMsg" class="toast hidden"></div>
     </section>
-
   </main>
 
-  <!-- QR generator + QR scanner libs -->
+  <!-- libs -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
 
+  <!-- IMPORTANT: defer -->
   <script src="./app.js" defer></script>
-
 </body>
 </html>

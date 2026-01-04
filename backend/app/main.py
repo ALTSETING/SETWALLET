@@ -2,20 +2,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import wallets, transactions
 
-app = FastAPI(title="SETWALLET OnlyChain")
+app = FastAPI(title="SETWALLET OnlyChain", version="1.0.0")
 
-# MVP: allow all. Потім звузимо до домена Vercel.
+# CORS: дозволяємо Vercel домен + локал
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # потім звузимо до твого домена
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(wallets.router, prefix="/wallets", tags=["wallets"])
-app.include_router(transactions.router, prefix="/tx", tags=["tx"])
+@app.get("/health")
+def health():
+    return {"ok": True}
 
-@app.get("/")
-def root():
-    return {"ok": True, "service": "setwallet-backend"}
+app.include_router(wallets.router)
+app.include_router(transactions.router)

@@ -14,3 +14,6 @@ btn.onclick = async () => {
     statusEl.textContent = "OFFLINE ❌";
   }
 };
+document.getElementById("balance").textContent = "1250";
+document.getElementById("address").textContent =
+  "SETabc123...789";

@@ -745,3 +745,19 @@ function hookViewEnter(){
     show("Welcome");
   }
 })();
+
+const payload = {
+  from_address: myAddress,
+  to_address: to,
+  amount: Number(amount),
+  nonce,
+  signature,
+  public_key: myPublicKey
+};
+
+await fetch(API_BASE + "/tx/send", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload)
+});
+

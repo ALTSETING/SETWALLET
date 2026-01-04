@@ -1,38 +1,331 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>SETWALLET</title>
-  <link rel="stylesheet" href="./style.css"/>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-<div class="bg"></div>
+  <div class="bg"></div>
+  <div class="noise"></div>
 
-<div class="app">
-
-  <header>
+  <header class="topbar">
     <div class="brand">
       <div class="logo">S</div>
-      <div class="title">SETWALLET</div>
+      <div>
+        <div class="title">SETWALLET</div>
+        <div class="subtitle">OnlyChain Wallet • <span id="apiStatus">перевіряю…</span></div>
+      </div>
     </div>
+
+    <button id="btnQuickSettings" class="iconBtn" title="Settings">
+      <span class="ico">⚙️</span>
+    </button>
   </header>
 
-  <div class="card">
-    <div class="muted">Баланс</div>
-    <div class="balance">
-      <span id="balance">0</span> <span class="unit">ALT</span>
+  <main class="wrap">
+    <!-- WELCOME -->
+    <section id="viewWelcome" class="card view">
+      <div class="hero">
+        <div class="heroGlow"></div>
+        <h1>Твій гаманець у браузері</h1>
+        <p class="muted">
+          Приватні ключі <b>ніколи</b> не відправляються на сервер. Підпис транзакцій — тільки локально.
+        </p>
+
+        <div class="grid2">
+          <button id="btnCreate" class="btn primary">
+            <span>Створити</span>
+            <span class="btnSub">новий гаманець</span>
+          </button>
+          <button id="btnImport" class="btn">
+            <span>Імпортувати</span>
+            <span class="btnSub">з backup / key</span>
+          </button>
+        </div>
+
+        <div class="tip">
+          <div class="pill">Порада</div>
+          <div class="muted">Постав пароль — тоді ключ зберігається зашифровано (AES-GCM).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CREATE -->
+    <section id="viewCreate" class="card view hidden">
+      <div class="headRow">
+        <div>
+          <h2>Створення гаманця</h2>
+          <p class="muted">Згенеруємо ECDSA P-256. Адреса = SHA-256(public PEM) → перші 20 байт.</p>
+        </div>
+        <button class="iconBtn" data-nav="welcome" title="Назад">←</button>
+      </div>
+
+      <div class="field">
+        <label>Пароль (опціонально, рекомендовано)</label>
+        <input id="createPass" type="password" placeholder="пароль для шифрування local vault" />
+        <div class="hint">Без пароля private key буде збережений відкрито (тільки для MVP).</div>
+      </div>
+
+      <button id="btnDoCreate" class="btn primary full">
+        <span class="spark"></span>
+        Згенерувати гаманець
+      </button>
+
+      <div id="createOut" class="hidden mt16">
+        <div class="sep"></div>
+
+        <div class="field">
+          <label>Address</label>
+          <div class="copyRow">
+            <input id="createAddress" readonly />
+            <button class="iconBtn" id="btnCopyCreateAddr" title="Copy">⧉</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Public Key (PEM)</label>
+          <textarea id="createPub" rows="6" readonly></textarea>
+        </div>
+
+        <div class="grid2">
+          <button id="btnRegister" class="btn primary">Зареєструвати в OnlyChain</button>
+          <button id="btnGoWalletFromCreate" class="btn">Відкрити гаманець</button>
+        </div>
+
+        <div id="createMsg" class="toast hidden"></div>
+      </div>
+    </section>
+
+    <!-- IMPORT -->
+    <section id="viewImport" class="card view hidden">
+      <div class="headRow">
+        <div>
+          <h2>Імпорт</h2>
+          <p class="muted">Імпортуй з Backup JSON (рекомендовано) або встав Private Key PEM.</p>
+        </div>
+        <button class="iconBtn" data-nav="welcome" title="Назад">←</button>
+      </div>
+
+      <div class="grid2">
+        <button id="btnImportJson" class="btn primary">Імпорт Backup JSON</button>
+        <button id="btnLoadLocal" class="btn">Знайти локальний</button>
+      </div>
+
+      <input id="importFile" type="file" accept="application/json" class="hidden" />
+
+      <div class="sep"></div>
+
+      <div class="field">
+        <label>Пароль (якщо backup зашифрований)</label>
+        <input id="importPass" type="password" placeholder="пароль" />
+      </div>
+
+      <div class="field">
+        <label>Private Key (PEM) — аварійний варіант</label>
+        <textarea id="importPriv" rows="8" placeholder="-----BEGIN PRIVATE KEY----- ..."></textarea>
+        <div class="hint">PEM імпорт — для MVP. Найкраще — Backup JSON зі Settings.</div>
+      </div>
+
+      <button id="btnDoImport" class="btn primary full">Імпортувати</button>
+      <div id="importMsg" class="toast hidden"></div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="viewWallet" class="card view hidden">
+      <div class="dashTop">
+        <div>
+          <div class="muted">Адреса</div>
+          <div class="addrRow">
+            <code id="walletAddr" class="addr">SET…</code>
+            <button id="btnCopyAddr" class="iconBtn" title="Copy">⧉</button>
+          </div>
+        </div>
+
+        <div class="balCard">
+          <div class="muted">Баланс</div>
+          <div class="balanceLine">
+            <div id="balSkeleton" class="skeleton skeletonText"></div>
+            <div id="balReal" class="hidden">
+              <span id="walletBal" class="balance">0</span>
+              <span class="unit">ALT</span>
+            </div>
+          </div>
+          <button id="btnRefresh" class="btn small ghost">Оновити</button>
+        </div>
+      </div>
+
+      <div class="grid2 mt12">
+        <button class="btn primary" data-nav="send">Send</button>
+        <button class="btn" data-nav="receive">Receive</button>
+      </div>
+
+      <div class="grid2 mt12">
+        <button class="btn ghost" data-nav="history">History</button>
+        <button class="btn ghost" data-nav="settings">Settings</button>
+      </div>
+
+      <div id="dashMsg" class="toast hidden"></div>
+    </section>
+
+    <!-- SEND -->
+    <section id="viewSend" class="card view hidden">
+      <div class="headRow">
+        <div>
+          <h2>Send</h2>
+          <p class="muted">Підпис локально. Сервер перевіряє підпис і пише транзакцію в БД.</p>
+        </div>
+        <button class="iconBtn" data-nav="wallet" title="Назад">←</button>
+      </div>
+
+      <div class="field">
+        <label>To address</label>
+        <input id="sendTo" placeholder="SET..." />
+      </div>
+
+      <div class="field">
+        <label>Amount (ALT)</label>
+        <input id="sendAmt" type="number" min="1" step="1" placeholder="100" />
+      </div>
+
+      <div class="field">
+        <label>Memo (опц.)</label>
+        <input id="sendMemo" placeholder="coffee" />
+      </div>
+
+      <button id="btnDoSend" class="btn primary full">
+        <span class="spark"></span>
+        Підписати і відправити
+      </button>
+
+      <div id="sendMsg" class="toast hidden"></div>
+    </section>
+
+    <!-- RECEIVE -->
+    <section id="viewReceive" class="card view hidden">
+      <div class="headRow">
+        <div>
+          <h2>Receive</h2>
+          <p class="muted">Покажи QR — інші можуть швидко вставити твою адресу.</p>
+        </div>
+        <button class="iconBtn" data-nav="wallet" title="Назад">←</button>
+      </div>
+
+      <div class="qrWrap">
+        <div class="qrGlow"></div>
+        <div id="qr" class="qrBox"></div>
+      </div>
+
+      <div class="field">
+        <label>QR payload</label>
+        <textarea id="qrPayload" rows="3" readonly></textarea>
+      </div>
+
+      <div class="grid2">
+        <button id="btnRegenQR" class="btn">Оновити QR</button>
+        <button id="btnShareQR" class="btn primary">Поділитись</button>
+      </div>
+
+      <div id="recvMsg" class="toast hidden"></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section id="viewHistory" class="card view hidden">
+      <div class="headRow">
+        <div>
+          <h2>History</h2>
+          <p class="muted">Останні транзакції (як у Metamask).</p>
+        </div>
+        <button class="iconBtn" data-nav="wallet" title="Назад">←</button>
+      </div>
+
+      <div id="histSkeleton">
+        <div class="histItem skeletonBox"></div>
+        <div class="histItem skeletonBox"></div>
+        <div class="histItem skeletonBox"></div>
+      </div>
+
+      <div id="histList" class="histList hidden"></div>
+
+      <button id="btnReloadHistory" class="btn ghost full mt12">Оновити History</button>
+      <div id="histMsg" class="toast hidden"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="viewSettings" class="card view hidden">
+      <div class="headRow">
+        <div>
+          <h2>Settings</h2>
+          <p class="muted">Backup / Безпека / Локальні дані.</p>
+        </div>
+        <button class="iconBtn" data-nav="wallet" title="Назад">←</button>
+      </div>
+
+      <div class="settingBlock">
+        <div class="settingTitle">Backup (JSON)</div>
+        <div class="muted">Збережи файл — це твій “seed” для цього MVP. Тримай в безпечному місці.</div>
+
+        <div class="field mt12">
+          <label>Пароль для backup (опц.)</label>
+          <input id="backupPass" type="password" placeholder="якщо хочеш — зашифруємо backup" />
+          <div class="hint">Якщо пароль є — private key буде зашифрований AES-GCM (PBKDF2).</div>
+        </div>
+
+        <div class="grid2 mt12">
+          <button id="btnDownloadBackup" class="btn primary">Завантажити Backup</button>
+          <button id="btnShowPublic" class="btn">Показати Public Key</button>
+        </div>
+      </div>
+
+      <div class="settingBlock">
+        <div class="settingTitle">Скидання</div>
+        <div class="muted">Видаляє локальні дані гаманця на цьому пристрої.</div>
+        <button id="btnLogout" class="btn ghost full mt12">Вийти (очистити локально)</button>
+      </div>
+
+      <div id="setMsg" class="toast hidden"></div>
+    </section>
+
+    <!-- PUBLIC KEY MODAL -->
+    <div id="pubModal" class="modal hidden">
+      <div class="modalCard">
+        <div class="modalHead">
+          <div class="modalTitle">Public Key (PEM)</div>
+          <button id="btnCloseModal" class="iconBtn">✕</button>
+        </div>
+        <textarea id="walletPub" rows="10" readonly></textarea>
+      </div>
     </div>
-    <div class="muted" id="address">SET…</div>
-  </div>
 
-  <div class="grid2">
-    <button class="btn primary" id="btnSend">Send</button>
-    <button class="btn" id="btnReceive">Receive</button>
-  </div>
+  </main>
 
-</div>
+  <!-- Bottom Nav -->
+  <nav class="bottomNav">
+    <button class="navBtn" data-nav="wallet" aria-label="Wallet">
+      <span class="navIco">💼</span>
+      <span class="navTxt">Wallet</span>
+    </button>
+    <button class="navBtn" data-nav="send" aria-label="Send">
+      <span class="navIco">📤</span>
+      <span class="navTxt">Send</span>
+    </button>
+    <button class="navBtn" data-nav="receive" aria-label="Receive">
+      <span class="navIco">📥</span>
+      <span class="navTxt">Receive</span>
+    </button>
+    <button class="navBtn" data-nav="history" aria-label="History">
+      <span class="navIco">🧾</span>
+      <span class="navTxt">History</span>
+    </button>
+    <button class="navBtn" data-nav="settings" aria-label="Settings">
+      <span class="navIco">⚙️</span>
+      <span class="navTxt">Settings</span>
+    </button>
+  </nav>
 
-<script src="./app.js"></script>
+  <!-- QR library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>

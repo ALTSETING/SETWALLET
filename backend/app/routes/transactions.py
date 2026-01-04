@@ -1,5 +1,5 @@
 import hashlib
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from app.schemas import SendTx
 from app.db import get_conn
 from app.crypto import verify_signature
@@ -51,3 +51,33 @@ def send_tx(body: SendTx):
         conn.commit()
 
     return {"ok": True, "tx_id": tx_id}
+
+@router.get("/history/{address}")
+def history(address: str, limit: int = Query(50, ge=1, le=200)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                select tx_id, from_address, to_address, amount, nonce, memo, created_at
+                from public.ledger
+                where from_address = %s or to_address = %s
+                order by created_at desc
+                limit %s
+                """,
+                (address, address, limit),
+            )
+            rows = cur.fetchall()
+
+    items = []
+    for r in rows:
+        items.append({
+            "tx_id": r[0],
+            "from_address": r[1],
+            "to_address": r[2],
+            "amount": int(r[3]),
+            "nonce": int(r[4]),
+            "memo": r[5],
+            "created_at": r[6].isoformat() if r[6] else None,
+        })
+
+    return {"address": address, "items": items}

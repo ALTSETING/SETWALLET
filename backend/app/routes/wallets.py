@@ -40,3 +40,17 @@ def get_balance(address: str):
             if not row:
                 raise HTTPException(status_code=404, detail="Wallet not found")
             return {"address": address, "balance": int(row[0])}
+
+@router.post("/{address}/faucet")
+def faucet(address: str, amount: int = 1000):
+    if amount <= 0 or amount > 1_000_000:
+        raise HTTPException(status_code=400, detail="Bad amount")
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("select address from wallets where address=%s", (address,))
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Wallet not found")
+            cur.execute("update wallets set balance = balance + %s where address=%s", (amount, address))
+        conn.commit()
+    return {"ok": True, "address": address, "added": amount}

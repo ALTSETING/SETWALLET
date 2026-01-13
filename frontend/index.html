@@ -279,6 +279,21 @@
       </div>
 
       <div class="settingBlock">
+        <div class="settingTitle">API підключення</div>
+        <div class="muted">Вкажи адресу бекенду (наприклад, https://setwallet.onrender.com або http://localhost:8000).</div>
+
+        <div class="field mt12">
+          <label>API Base URL</label>
+          <input id="apiBaseInput" type="text" placeholder="https://your-backend.example" />
+          <div class="hint">Порожнє значення = авто-визначення.</div>
+        </div>
+
+        <div class="grid2 mt12">
+          <button id="btnSaveApi" class="btn primary">Зберегти API URL</button>
+        </div>
+      </div>
+
+      <div class="settingBlock">
         <div class="settingTitle">Скидання</div>
         <div class="muted">Видаляє локальні дані гаманця на цьому пристрої.</div>
         <button id="btnLogout" class="btn ghost full mt12">Вийти (очистити локально)</button>

@@ -1,6 +1,11 @@
 from app.db import get_conn
+from app.config import OWNER_ADDRESS
+
+OWNER_UNLIMITED_BALANCE = 10**18
 
 def get_balance(address: str) -> int:
+    if OWNER_ADDRESS and address == OWNER_ADDRESS:
+        return OWNER_UNLIMITED_BALANCE
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(

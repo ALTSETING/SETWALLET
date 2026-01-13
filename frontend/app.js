@@ -3,7 +3,42 @@ console.log("SETWALLET UI LOADED");
 // =====================
 // CONFIG
 // =====================
-const API_BASE = "https://setwallet.onrender.com";
+const API_BASE_STORAGE_KEY = "setwallet_api_base";
+
+function normalizeApiBase(url){
+  if(!url) return "";
+  return url.replace(/\/+$/g, "");
+}
+
+function resolveApiBase(){
+  const params = new URLSearchParams(window.location.search);
+  const paramBase = params.get("api");
+  if(paramBase){
+    const normalized = normalizeApiBase(paramBase);
+    localStorage.setItem(API_BASE_STORAGE_KEY, normalized);
+    return normalized;
+  }
+
+  const stored = localStorage.getItem(API_BASE_STORAGE_KEY);
+  if(stored) return normalizeApiBase(stored);
+
+  if(window.SETWALLET_API_BASE){
+    return normalizeApiBase(window.SETWALLET_API_BASE);
+  }
+
+  const host = window.location.hostname;
+  if(host === "localhost" || host === "127.0.0.1"){
+    return "http://localhost:8000";
+  }
+
+  if(window.location.origin && window.location.origin !== "null"){
+    return normalizeApiBase(window.location.origin);
+  }
+
+  return "https://setwallet.onrender.com";
+}
+
+let API_BASE = resolveApiBase();
 
 // Local storage keys
 const LS_WALLET = "setwallet_wallet_v2";
@@ -39,6 +74,21 @@ function toast(id, msg){
   el.textContent = msg;
   el.classList.remove("hidden");
   setTimeout(()=> el.classList.add("hidden"), 5500);
+}
+
+function updateApiStatus(ok){
+  const apiEl = safeEl("apiStatus");
+  if(apiEl) apiEl.textContent = ok ? "онлайн ✅" : "не відповідає ❌";
+}
+
+async function pingAndUpdateStatus(){
+  const ok = await apiPing();
+  updateApiStatus(ok);
+}
+
+function updateApiBaseInput(){
+  const input = safeEl("apiBaseInput");
+  if(input) input.value = API_BASE;
 }
 
 function shortAddr(a){
@@ -668,6 +718,27 @@ function bindActions(){
   const btnCloseModal = safeEl("btnCloseModal");
   if(btnCloseModal) btnCloseModal.onclick = ()=> safeEl("pubModal")?.classList.add("hidden");
 
+  // Settings: API base
+  const btnSaveApi = safeEl("btnSaveApi");
+  if(btnSaveApi) btnSaveApi.onclick = async ()=>{
+    const input = safeEl("apiBaseInput");
+    if(!input) return;
+    const next = normalizeApiBase(input.value.trim());
+    if(!next){
+      localStorage.removeItem(API_BASE_STORAGE_KEY);
+      API_BASE = resolveApiBase();
+      updateApiBaseInput();
+      toast("setMsg", "API URL скинуто ✅");
+      await pingAndUpdateStatus();
+      return;
+    }
+
+    API_BASE = next;
+    localStorage.setItem(API_BASE_STORAGE_KEY, API_BASE);
+    toast("setMsg", "API URL збережено ✅");
+    await pingAndUpdateStatus();
+  };
+
   // Logout
   const btnLogout = safeEl("btnLogout");
   if(btnLogout) btnLogout.onclick = ()=>{
@@ -732,10 +803,9 @@ function hookViewEnter(){
   bindNav();
   bindActions();
   hookViewEnter();
+  updateApiBaseInput();
 
-  const ok = await apiPing();
-  const apiEl = safeEl("apiStatus");
-  if(apiEl) apiEl.textContent = ok ? "онлайн ✅" : "не відповідає ❌";
+  await pingAndUpdateStatus();
 
   const w = loadWallet();
   if(w){
@@ -745,19 +815,3 @@ function hookViewEnter(){
     show("Welcome");
   }
 })();
-
-const payload = {
-  from_address: myAddress,
-  to_address: to,
-  amount: Number(amount),
-  nonce,
-  signature,
-  public_key: myPublicKey
-};
-
-await fetch(API_BASE + "/tx/send", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(payload)
-});
-

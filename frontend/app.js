@@ -4,6 +4,7 @@ console.log("SETWALLET UI LOADED");
 // CONFIG
 // =====================
 const API_BASE_STORAGE_KEY = "setwallet_api_base";
+const DEFAULT_API_BASE = "https://setwallet.onrender.com";
 
 function normalizeApiBase(url){
   if(!url) return "";
@@ -32,10 +33,13 @@ function resolveApiBase(){
   }
 
   if(window.location.origin && window.location.origin !== "null"){
-    return normalizeApiBase(window.location.origin);
+     const origin = normalizeApiBase(window.location.origin);
+    if(origin === DEFAULT_API_BASE){
+      return origin;
+    }
   }
 
-  return "https://setwallet.onrender.com";
+   return DEFAULT_API_BASE;
 }
 
 let API_BASE = resolveApiBase();

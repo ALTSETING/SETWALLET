@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import wallets, transactions
+from app.routes import wallets, transactions, admin
 
 app = FastAPI(title="SETWALLET OnlyChain", version="1.0.0")
 
@@ -19,3 +19,4 @@ def health():
 
 app.include_router(wallets.router)
 app.include_router(transactions.router)
+app.include_router(admin.router)

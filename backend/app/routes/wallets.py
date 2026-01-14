@@ -14,7 +14,7 @@ def register_wallet(body: RegisterWallet):
                 return {"ok": True, "address": body.address}
 
             cur.execute(
-                "insert into public.wallets(address, public_key_pem) values (%s,%s)",
+                "insert into public.wallets(address, public_key) values (%s,%s)",
                 (body.address, body.public_key),
             )
         conn.commit()

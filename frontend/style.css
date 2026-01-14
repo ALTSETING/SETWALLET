@@ -603,3 +603,76 @@ html, body {
   }
 }
 
+/* ============================= */
+/* 🔥 HARD MOBILE FIX (iOS)     */
+/* ============================= */
+
+/* 1️⃣ Гарантовано блокуємо горизонтальний рух */
+html, body {
+  width: 100%;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+
+/* 2️⃣ Адресний рядок — ЖОРСТКО */
+.addrRow {
+  display: flex !important;
+  flex-wrap: nowrap !important;   /* 🔴 КЛЮЧОВЕ */
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* 3️⃣ Адреса — тепер НІКОЛИ не вилізе */
+.addr {
+  display: block !important;      /* 🔴 замість inline-block */
+  flex: 1 1 auto;
+  min-width: 0;                   /* 🔴 КРИТИЧНО ДЛЯ iOS */
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  font-size: 13px;
+}
+
+/* 4️⃣ Кнопка копіювання — фіксована */
+.addrRow .iconBtn {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+}
+
+/* ============================= */
+/* 💰 BALANCE HARD FIX           */
+/* ============================= */
+
+.balanceLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.balance {
+  max-width: 100%;
+  font-size: 26px;
+  line-height: 1.1;
+  overflow-wrap: break-word;
+}
+
+/* ============================= */
+/* 🧭 BOTTOM NAV SAFE AREA FIX   */
+/* ============================= */
+
+.bottomNav {
+  bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
+}
+
+/* щоб контент НІКОЛИ не залазив під меню */
+.wrap {
+  padding-bottom: calc(160px + env(safe-area-inset-bottom));
+}
+

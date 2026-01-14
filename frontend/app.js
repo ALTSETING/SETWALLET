@@ -6,6 +6,19 @@ console.log("SETWALLET UI LOADED");
 const API_BASE_STORAGE_KEY = "setwallet_api_base";
 const DEFAULT_API_BASE = "https://setwallet.onrender.com";
 
+const removeLoader = () => {
+  const loader = document.getElementById("appLoader");
+  if(!loader || loader.classList.contains("done")) return;
+  loader.classList.add("done");
+  setTimeout(() => loader.remove(), 700);
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(removeLoader, 1200);
+});
+
+window.addEventListener("load", removeLoader);
+
 function normalizeApiBase(url){
   if(!url) return "";
   return url.replace(/\/+$/g, "");

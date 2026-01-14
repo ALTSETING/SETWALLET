@@ -140,13 +140,16 @@ async function apiRegisterWallet(address, public_key){
   return j;
 }
 
-async function registerWalletIfPossible(wallet, toastId){
-  if(!wallet?.address || !wallet?.public_key_pem) return;
+  async function registerWalletIfPossible(wallet, toastId, options = {}){
+  if(!wallet?.address || !wallet?.public_key_pem) return false;
   try{
     await apiRegisterWallet(wallet.address, wallet.public_key_pem);
     if(toastId) toast(toastId, "Гаманець зареєстровано ✅");
+    return true;
   }catch(e){
     if(toastId) toast(toastId, "Register error: " + e.message);
+    if(options.throwOnError) throw e;
+    return false;
   }
 }
 
@@ -487,12 +490,14 @@ function bindActions(){
   if(reg) reg.onclick = async ()=>{
     const w = loadWallet();
     if(!w) return toast("createMsg", "Нема локального гаманця");
-    try{
-      await apiRegisterWallet(w.address, w.public_key_pem);
-      toast("createMsg", "Зареєстровано ✅");
-    }catch(e){
-      toast("createMsg", "Register error: " + e.message);
-    }
+    await registerWalletIfPossible(w, "createMsg");
+  };
+
+  const regDash = safeEl("btnRegisterWallet");
+  if(regDash) regDash.onclick = async ()=>{
+    const w = loadWallet();
+    if(!w) return toast("dashMsg", "Нема локального гаманця");
+    await registerWalletIfPossible(w, "dashMsg");
   };
 
   // Go wallet
@@ -659,6 +664,8 @@ function bindActions(){
       // import private key
       const der = pemToDer(privPem);
       const privKey = await crypto.subtle.importKey("pkcs8", der, { name:"ECDSA", namedCurve:"P-256" }, true, ["sign"]);
+
+      await registerWalletIfPossible(w, "sendMsg", { throwOnError: true });
 
       const nonce = getNextNonce();
       const msg = `${w.address}:${to}:${amt}:${nonce}`;

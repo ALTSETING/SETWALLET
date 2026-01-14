@@ -541,6 +541,7 @@ function bindActions(){
 
         saveWallet(stored);
         toast("importMsg", "Імпорт успішний ✅");
+        await registerWalletIfPossible(stored, "importMsg");
         show("Wallet");
         await onEnterWallet();
       }catch(e){
@@ -583,6 +584,7 @@ function bindActions(){
 
       saveWallet(stored);
       toast("importMsg", "PEM імпорт OK ✅");
+      await registerWalletIfPossible(stored, "importMsg");
       show("Wallet");
       await onEnterWallet();
     }catch(e){

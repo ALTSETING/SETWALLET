@@ -140,6 +140,16 @@ async function apiRegisterWallet(address, public_key){
   return j;
 }
 
+async function registerWalletIfPossible(wallet, toastId){
+  if(!wallet?.address || !wallet?.public_key_pem) return;
+  try{
+    await apiRegisterWallet(wallet.address, wallet.public_key_pem);
+    if(toastId) toast(toastId, "Гаманець зареєстровано ✅");
+  }catch(e){
+    if(toastId) toast(toastId, "Register error: " + e.message);
+  }
+}
+
 async function apiGetBalance(address){
   const r = await fetch(API_BASE + `/wallets/${encodeURIComponent(address)}/balance`);
   const j = await r.json().catch(()=> ({}));
@@ -459,7 +469,8 @@ function bindActions(){
     if(safeEl("createPub")) safeEl("createPub").value = pubPem;
 
     safeEl("createOut")?.classList.remove("hidden");
-    toast("createMsg", "Гаманець створено ✅ Зроби Register, щоб отримувати баланс/історію.");
+    toast("createMsg", "Гаманець створено ✅");
+    await registerWalletIfPossible(stored, "createMsg");
   };
 
   // Copy created address

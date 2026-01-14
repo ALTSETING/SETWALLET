@@ -32,9 +32,15 @@ def send_tx(tx: Tx):
             )
             row = cur.fetchone()
             if not row:
-                raise HTTPException(400, "Sender not registered")
+                cur.execute(
+                    "INSERT INTO wallets(address, public_key) VALUES (%s, %s)",
+                    (tx.from_address, tx.public_key),
+                )
+                row_public_key = tx.public_key
+            else:
+                row_public_key = row[0]
 
-            if row[0].strip() != tx.public_key.strip():
+            if row_public_key.strip() != tx.public_key.strip():
                 raise HTTPException(400, "Public key mismatch")
 
             # баланс

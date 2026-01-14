@@ -280,18 +280,39 @@ input:focus, textarea:focus{
   grid-template-columns: 1fr;
   gap: 14px;
 }
+
+.dashTop > *{
+  min-width: 0;
+}
+
 @media (min-width: 900px){
   .dashTop{grid-template-columns: 1.3fr .7fr;}
 }
-.addrRow{display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap}
+.addrRow{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-top:6px;
+  flex-wrap:nowrap;
+  overflow:hidden;
+  max-width:100%;
+  width:100%;
+}
 .addr{
-  display:inline-block;
+  flex:1 1 auto;
+  min-width:0;
+  max-width:100%;
+  display:block;
   padding:10px 12px;
   border-radius: 14px;
   border:1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.03);
-  max-width: 100%;
-  overflow:auto;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.addrRow .iconBtn{
+  flex:0 0 auto;
 }
 .balCard{
   padding:12px;
@@ -299,9 +320,29 @@ input:focus, textarea:focus{
   border:1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.03);
 }
-.balanceLine{margin-top:6px; min-height:44px}
-.balance{font-size:34px; font-weight:900}
-.unit{font-size:13px; color:var(--muted); font-weight:700}
+
+.balanceLine{
+  margin-top:6px;
+  min-height:44px;
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  min-width:0;
+  flex-wrap:wrap;
+}
+.balance{
+  font-size:34px;
+  font-weight:900;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.unit{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:700;
+  white-space:nowrap;
+}
 
 /* Toast */
 .toast{

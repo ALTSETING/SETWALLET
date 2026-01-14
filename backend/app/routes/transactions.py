@@ -27,7 +27,7 @@ def send_tx(tx: Tx):
         with conn.cursor() as cur:
             # перевірка гаманця
             cur.execute(
-                "SELECT public_key_pem FROM wallets WHERE address=%s",
+                "SELECT public_key FROM wallets WHERE address=%s",
                 (tx.from_address,)
             )
             row = cur.fetchone()

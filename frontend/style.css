@@ -484,16 +484,24 @@ html, body {
 /* Адресний рядок — жорсткий */
 .addrRow {
   flex-wrap: nowrap !important;
+  align-items: center;
   overflow: hidden;
+  max-width: 100%;
 }
 
 /* Адреса — без overflow:auto */
 .addr {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden !important;
   white-space: nowrap;
   text-overflow: ellipsis;
-  min-width: 0;
   display: block;
+}
+
+.addrRow .iconBtn {
+  flex: 0 0 auto;
 }
 
 /* iOS: прибираємо фантомний scroll */
